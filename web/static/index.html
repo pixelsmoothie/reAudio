@@ -33,17 +33,23 @@
     </header>
 
     <!-- Main Workspace -->
-    <main class="main-content">
+    <main class="main-content is-landing" id="mainContent">
       
       <!-- Search & Discovery -->
-      <section class="search-area">
+      <section class="search-area" id="searchArea">
+        
+        <div class="landing-hero" id="landingHero">
+          <h1 class="landing-title">reAudio</h1>
+          <p class="landing-sub">Describe any sound, mood, texture, or acoustic scene to find matches.</p>
+        </div>
+
         <div class="search-bar">
           <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="9" cy="9" r="6"/>
             <line x1="13.5" y1="13.5" x2="18" y2="18"/>
           </svg>
           <input id="searchInput" type="text" autocomplete="off" spellcheck="false"
-                 placeholder="Search by sound, mood, texture, or instrument... (Press '/' to focus)">
+                 placeholder="Search sounds, textures, instruments... (Press '/' to focus)" autofocus>
           
           <div class="search-actions">
             <button id="filtersToggle" class="btn btn-filter" title="Toggle filters">
@@ -104,15 +110,15 @@
 
         <!-- Presets / Mood Tags -->
         <div class="preset-bar">
-          <span class="preset-label">Suggestions:</span>
+          <span class="preset-label">Try:</span>
           <div id="presetPills" class="preset-pills"></div>
         </div>
       </section>
 
-      <!-- Track List Table -->
-      <section class="tracks-section">
+      <!-- Track List Table (Shown only when results exist) -->
+      <section class="tracks-section hidden" id="tracksSection">
         <div class="section-header">
-          <h2 id="resultsTitle" class="section-title">All Sounds</h2>
+          <h2 id="resultsTitle" class="section-title">Results</h2>
           <span id="resultsCount" class="section-count mono"></span>
         </div>
 
@@ -133,15 +139,15 @@
 
           <div id="emptyState" class="empty-state hidden">
             <p class="empty-text">No tracks match your current query or filters.</p>
-            <button id="emptyClearBtn" class="btn btn-secondary">Reset Search</button>
+            <button id="emptyClearBtn" class="btn btn-secondary">Clear Search</button>
           </div>
         </div>
       </section>
 
     </main>
 
-    <!-- Bottom Audio Player -->
-    <footer class="bottom-player" id="playerBar">
+    <!-- Bottom Audio Player (Revealed when playing) -->
+    <footer class="bottom-player hidden" id="playerBar">
       <div class="player-left">
         <div class="now-playing-info">
           <div id="npTitle" class="np-title">No track selected</div>

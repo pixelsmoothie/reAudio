@@ -177,7 +177,24 @@ function rowEl(track, showScore) {
   return row;
 }
 
+function showLanding() {
+  const mc = $("mainContent");
+  if (mc) mc.classList.add("is-landing");
+  const ts = $("tracksSection");
+  if (ts) ts.classList.add("hidden");
+  $("searchInput").value = "";
+  $("searchInput").focus();
+}
+
+function showResultsView() {
+  const mc = $("mainContent");
+  if (mc) mc.classList.remove("is-landing");
+  const ts = $("tracksSection");
+  if (ts) ts.classList.remove("hidden");
+}
+
 function renderResults(list, title, showScore) {
+  showResultsView();
   $("resultsTitle").textContent = title;
   $("resultsCount").textContent = `${list.length} track${list.length === 1 ? "" : "s"}`;
   const body = $("trackGrid");
@@ -195,7 +212,7 @@ async function loadBrowse() {
 async function doSearch() {
   const query = $("searchInput").value.trim();
   if (!query) {
-    toast("Type a description to search.", true);
+    showLanding();
     return;
   }
   const body = { query, top_k: 12, ...currentFilters() };
@@ -268,6 +285,9 @@ function ensureAudioGraph() {
 }
 
 function togglePlay(track) {
+  const playerBar = $("playerBar");
+  if (playerBar) playerBar.classList.remove("hidden");
+
   if (state.currentTrackId === track.track_id) {
     if (audioEl.paused) audioEl.play();
     else audioEl.pause();
@@ -504,8 +524,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  const emptyClear = $("emptyClearBtn");
+  if (emptyClear) emptyClear.addEventListener("click", showLanding);
+
+  const brandLink = $("brandLink");
+  if (brandLink) {
+    brandLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      showLanding();
+    });
+  }
+
   setupUpload();
   updateFilterLabels();
   loadPresets().catch((err) => toast(err.message, true));
-  loadBrowse().catch((err) => toast(err.message, true));
+  api("/api/tracks").then((tracks) => { state.browseTracks = tracks; }).catch(() => {});
 });
