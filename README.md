@@ -2,13 +2,6 @@
 
 > Fractal-aware multimodal audio retrieval engine combining physical waveform analysis with zero-shot contrastive embeddings and relational SQL constraint filtering.
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?logo=pytorch&logoColor=white)
-![Librosa](https://img.shields.io/badge/librosa-0.10+-F25CA2?logoColor=white)
-![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-D71F00?logo=sqlalchemy&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-52%20passing-1DB954)
-
 reAudio indexes audio libraries by coupling mathematical time-series fractal analysis with multimodal text-audio representations. It resolves natural language sound design intent into exact relational SQL constraints (duration, BPM, waveform roughness) followed by cosine semantic vector re-ranking.
 
 ---
