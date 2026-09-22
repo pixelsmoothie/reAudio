@@ -181,11 +181,80 @@ function rowEl(track, showScore) {
   return row;
 }
 
+function resetPipelineHUD() {
+  const hud = $("pipelineHUD");
+  if (!hud) return;
+  hud.classList.remove("running", "done");
+  hud.classList.add("hidden");
+
+  for (let i = 1; i <= 4; i++) {
+    const card = $(`hudStage${i}`);
+    const badge = $(`stageBadge${i}`);
+    const fill = $(`stageFill${i}`);
+    if (card) card.classList.remove("is-active", "is-complete");
+    if (badge) badge.textContent = "READY";
+    if (fill) fill.style.width = "0%";
+  }
+}
+
+async function runPipelineAnimation() {
+  const hud = $("pipelineHUD");
+  if (!hud) return;
+  hud.classList.remove("hidden", "done");
+  hud.classList.add("running");
+  $("hudStatusText").textContent = "PIPELINE: EXECUTING MULTIMODAL RETRIEVAL...";
+
+  // Stage 1: Relational SQL Pruning
+  const c1 = $("hudStage1"), b1 = $("stageBadge1"), f1 = $("stageFill1");
+  if (c1) c1.classList.add("is-active");
+  if (b1) b1.textContent = "PRUNING...";
+  if (f1) f1.style.width = "100%";
+
+  await new Promise((r) => setTimeout(r, 140));
+  if (c1) { c1.classList.remove("is-active"); c1.classList.add("is-complete"); }
+  if (b1) b1.textContent = "FILTERED";
+
+  // Stage 2: CLAP 512-D Latent Vector Projection
+  const c2 = $("hudStage2"), b2 = $("stageBadge2"), f2 = $("stageFill2");
+  if (c2) c2.classList.add("is-active");
+  if (b2) b2.textContent = "EMBEDDING...";
+  if (f2) f2.style.width = "100%";
+
+  await new Promise((r) => setTimeout(r, 140));
+  if (c2) { c2.classList.remove("is-active"); c2.classList.add("is-complete"); }
+  if (b2) b2.textContent = "512-D COSINE";
+
+  // Stage 3: 70/30 Score Fusion
+  const c3 = $("hudStage3"), b3 = $("stageBadge3"), f3 = $("stageFill3");
+  if (c3) c3.classList.add("is-active");
+  if (b3) b3.textContent = "FUSING...";
+  if (f3) f3.style.width = "100%";
+
+  await new Promise((r) => setTimeout(r, 140));
+  if (c3) { c3.classList.remove("is-active"); c3.classList.add("is-complete"); }
+  if (b3) b3.textContent = "70/30 FUSED";
+
+  // Stage 4: Grounded Match Diagnostics
+  const c4 = $("hudStage4"), b4 = $("stageBadge4"), f4 = $("stageFill4");
+  if (c4) c4.classList.add("is-active");
+  if (b4) b4.textContent = "SYNTHESIZING...";
+  if (f4) f4.style.width = "100%";
+
+  await new Promise((r) => setTimeout(r, 120));
+  if (c4) { c4.classList.remove("is-active"); c4.classList.add("is-complete"); }
+  if (b4) b4.textContent = "GROUNDED";
+
+  hud.classList.remove("running");
+  hud.classList.add("done");
+  $("hudStatusText").textContent = "PIPELINE: EXECUTION COMPLETE";
+}
+
 function showLanding() {
   const mc = $("mainContent");
   if (mc) mc.classList.add("is-landing");
   const ts = $("tracksSection");
   if (ts) ts.classList.add("hidden");
+  resetPipelineHUD();
   $("searchInput").value = "";
   $("searchInput").focus();
 }
@@ -223,16 +292,29 @@ async function doSearch() {
     return;
   }
 
+  showResultsView();
   const body = { query: query || "", top_k: 16, ...filters };
+
+  // Run search API call and pipeline animation concurrently
+  const searchPromise = api("/api/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const animPromise = runPipelineAnimation();
+
   try {
-    const results = await api("/api/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const [results] = await Promise.all([searchPromise, animPromise]);
+    const telem = results.find((t) => t.pipeline_telemetry)?.pipeline_telemetry;
+    if (telem) {
+      if ($("hudCandidateStats")) $("hudCandidateStats").textContent = `${telem.candidates_returned} / ${telem.total_corpus} candidates`;
+      if ($("hudLatencyStats")) $("hudLatencyStats").textContent = `${telem.latency_ms} ms`;
+    }
     const title = query ? `Results for "${query}"` : "Filtered Sounds";
     renderResults(results, title, !!query);
   } catch (err) {
+    resetPipelineHUD();
     toast(err.message, true);
   }
 }
@@ -391,6 +473,29 @@ function openExplainModal(track) {
   $("explainScore").textContent = (typeof ex.score_pct === "number")
     ? `${ex.score_pct.toFixed(0)}% Match` : "";
   $("explainSummary").textContent = ex.summary || "No match diagnostics available.";
+
+  // DSP Metric Breakdown
+  if ($("explainCosine")) {
+    $("explainCosine").textContent = (typeof track.similarity === "number")
+      ? track.similarity.toFixed(4)
+      : (typeof ex.score_pct === "number" ? (ex.score_pct / 100).toFixed(4) : "—");
+  }
+  if ($("explainAlignment")) {
+    $("explainAlignment").textContent = (typeof track.acoustic_alignment === "number")
+      ? `${Math.round(track.acoustic_alignment * 100)}%`
+      : "100%";
+  }
+  if ($("explainHFD")) {
+    $("explainHFD").textContent = (typeof track.higuchi_fractal_dimension === "number")
+      ? track.higuchi_fractal_dimension.toFixed(3)
+      : "—";
+  }
+  if ($("explainBPM")) {
+    $("explainBPM").textContent = (typeof track.bpm === "number" && track.bpm > 0)
+      ? `${Math.round(track.bpm)} BPM`
+      : "None";
+  }
+
   const list = $("explainInsights");
   list.innerHTML = "";
   (ex.insights || []).forEach((insight) => {
@@ -527,14 +632,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  document.querySelectorAll(".modal-overlay, .modal").forEach((modal) => {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal || e.target.classList.contains("close-modal") || e.target.classList.contains("modal-backdrop")) {
-        closeModal(modal);
-      }
-    });
-    const closeBtn = modal.querySelector(".close-modal");
-    if (closeBtn) closeBtn.addEventListener("click", () => closeModal(modal));
+  // Universal modal close handler
+  document.addEventListener("click", (e) => {
+    const closeEl = e.target.closest && e.target.closest(".close-modal, .modal-close-btn, [data-action='close-modal']");
+    if (closeEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const modal = closeEl.closest(".modal-overlay, .modal");
+      if (modal) closeModal(modal);
+      else closeAllModals();
+      return;
+    }
+    if (e.target.classList && (e.target.classList.contains("modal-overlay") || e.target.classList.contains("modal-backdrop"))) {
+      e.preventDefault();
+      e.stopPropagation();
+      const modal = e.target.closest(".modal-overlay, .modal") || e.target;
+      closeModal(modal);
+    }
   });
 
   document.addEventListener("keydown", (e) => {

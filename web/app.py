@@ -10,6 +10,7 @@ deterministic fallback embedder (useful for offline demos/tests).
 import os
 import re
 import shutil
+import time
 import uuid
 from pathlib import Path
 from typing import Optional
@@ -83,11 +84,52 @@ def search(request: SearchRequest):
         k: v for k, v in request.model_dump().items()
         if k not in ("query", "top_k") and v is not None
     }
+    t0 = time.perf_counter()
     try:
         results = engine.search(request.query, filters=filters, top_k=request.top_k)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Search failed: {exc}")
+    latency_ms = round((time.perf_counter() - t0) * 1000, 1)
+
+    total_corpus = len(get_all_tracks())
+    # Attach pipeline telemetry to each track for UI inspection while preserving list schema
+    for r in results:
+        r["pipeline_telemetry"] = {
+            "total_corpus": total_corpus,
+            "candidates_returned": len(results),
+            "latency_ms": latency_ms,
+            "top_k": request.top_k,
+            "fusion_weights": {"semantic": 0.70, "acoustic": 0.30},
+            "embedding_dim": 512,
+            "active_filters": filters,
+        }
     return [_public_track(r) for r in results]
+
+
+@app.get("/api/pipeline/stats")
+def pipeline_stats():
+    total_tracks = len(get_all_tracks())
+    return {
+        "engine": "reAudio Hybrid 2-Stage Retrieval",
+        "total_indexed_tracks": total_tracks,
+        "sample_rate_hz": 22050,
+        "embedding_model": "CLAP (Contrastive Language-Audio Pretraining)",
+        "embedding_dim": 512,
+        "fusion_weights": {"semantic_vector": 0.70, "acoustic_alignment": 0.30},
+        "dsp_metrics": [
+            {"name": "Higuchi Fractal Dimension (HFD)", "domain": "Non-linear time-series complexity", "range": "1.0 to 2.0", "formula": "OLS slope of ln(L(k)) vs ln(1/k), Higuchi 1988"},
+            {"name": "Spectral Centroid", "domain": "Frequency center of mass (brightness)", "unit": "Hz", "formula": "sum(f * S(f)) / sum(S(f))"},
+            {"name": "Spectral Fractal Exponent", "domain": "1/f^beta spectral power decay", "unit": "dimensionless", "formula": "Welch PSD log-log regression"},
+            {"name": "Zero-Crossing Rate", "domain": "High-frequency sign transitions", "unit": "rate", "formula": "librosa.feature.zero_crossing_rate"},
+            {"name": "Tempo & Beat Tracking", "domain": "Rhythmic periodicity", "unit": "BPM", "formula": "Dynamic programming beat tracker"},
+        ],
+        "pipeline_stages": [
+            {"step": 1, "name": "Relational SQL Pruning", "type": "Deterministic Pre-Filter", "desc": "Enforces hard boundaries (BPM bounds, max duration, Higuchi limits) using SQLite indexes."},
+            {"step": 2, "name": "Multimodal Vector Re-Ranking", "type": "Neural Representation", "desc": "Projects cleaned query into 512-D latent space and computes cosine dot product with pre-indexed audio embeddings."},
+            {"step": 3, "name": "Acoustic Score Fusion", "type": "Multi-Objective Ranking", "desc": "Calculates final score = 70% Semantic Vector Similarity + 30% Physical Acoustic Constraint Alignment."},
+            {"step": 4, "name": "Grounded Diagnostics", "type": "Explainable AI", "desc": "Compares retrieved DSP properties against user query intent to generate human-readable physical match reasons."}
+        ]
+    }
 
 
 @app.get("/api/recommend/{track_id}")

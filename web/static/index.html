@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=4">
+  <link rel="stylesheet" href="/styles.css?v=7">
 </head>
 <body>
 
@@ -129,6 +129,75 @@
           <span id="resultsCount" class="section-count mono"></span>
         </div>
 
+        <!-- Live Pipeline Execution Animation HUD -->
+        <div class="pipeline-hud hidden" id="pipelineHUD">
+          <div class="hud-top-bar">
+            <div class="hud-status">
+              <span class="hud-pulse-dot" id="hudPulseDot"></span>
+              <span class="hud-status-text mono" id="hudStatusText">PIPELINE: INITIALIZING RETRIEVAL...</span>
+            </div>
+            <div class="hud-telemetry mono" id="hudTelemetry">
+              <span id="hudCandidateStats">-- candidates</span>
+              <span class="hud-divider">&bull;</span>
+              <span id="hudLatencyStats">-- ms</span>
+            </div>
+          </div>
+
+          <div class="hud-stages-grid" id="hudStagesGrid">
+            <!-- Stage 1 -->
+            <div class="hud-stage-card" id="hudStage1">
+              <div class="stage-card-header">
+                <span class="stage-step-tag mono">STAGE 01</span>
+                <span class="stage-status-badge mono" id="stageBadge1">READY</span>
+              </div>
+              <div class="stage-title">Relational SQL Pruning</div>
+              <div class="stage-sub mono" id="stageSub1">BPM &bull; Length &bull; Higuchi</div>
+              <div class="stage-progress-track">
+                <div class="stage-progress-fill" id="stageFill1"></div>
+              </div>
+            </div>
+
+            <!-- Stage 2 -->
+            <div class="hud-stage-card" id="hudStage2">
+              <div class="stage-card-header">
+                <span class="stage-step-tag mono">STAGE 02</span>
+                <span class="stage-status-badge mono" id="stageBadge2">READY</span>
+              </div>
+              <div class="stage-title">CLAP 512-D Latent Vector</div>
+              <div class="stage-sub mono" id="stageSub2">PyTorch cosine projection</div>
+              <div class="stage-progress-track">
+                <div class="stage-progress-fill" id="stageFill2"></div>
+              </div>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="hud-stage-card" id="hudStage3">
+              <div class="stage-card-header">
+                <span class="stage-step-tag mono">STAGE 03</span>
+                <span class="stage-status-badge mono" id="stageBadge3">READY</span>
+              </div>
+              <div class="stage-title">70/30 Acoustic Score Fusion</div>
+              <div class="stage-sub mono" id="stageSub3">0.70 semantic + 0.30 acoustic</div>
+              <div class="stage-progress-track">
+                <div class="stage-progress-fill" id="stageFill3"></div>
+              </div>
+            </div>
+
+            <!-- Stage 4 -->
+            <div class="hud-stage-card" id="hudStage4">
+              <div class="stage-card-header">
+                <span class="stage-step-tag mono">STAGE 04</span>
+                <span class="stage-status-badge mono" id="stageBadge4">READY</span>
+              </div>
+              <div class="stage-title">Grounded Diagnostics</div>
+              <div class="stage-sub mono" id="stageSub4">Physical DSP feature match</div>
+              <div class="stage-progress-track">
+                <div class="stage-progress-fill" id="stageFill4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="table-container">
           <div class="tracks-table-head">
             <div class="col col-play"></div>
@@ -190,10 +259,13 @@
   <!-- Why this matched Modal -->
   <div id="explainModal" class="modal-overlay hidden">
     <div class="modal-backdrop close-modal"></div>
-    <div class="modal-box">
+    <div class="modal-box modal-wide">
       <div class="modal-header">
-        <h3>Match Analysis</h3>
-        <button class="btn-icon close-modal" aria-label="Close">
+        <div>
+          <h3>Match Diagnostics &amp; Scoring</h3>
+          <span class="modal-subtitle mono">70% CLAP Semantic Vector + 30% Physical Acoustic Alignment</span>
+        </div>
+        <button class="btn-icon close-modal modal-close-btn" data-action="close-modal" aria-label="Close">
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M3 3l10 10M13 3L3 13"/>
           </svg>
@@ -204,8 +276,28 @@
           <span id="explainTrack" class="explain-title"></span>
           <span id="explainScore" class="explain-score mono"></span>
         </div>
+
+        <div class="explain-dsp-grid">
+          <div class="dsp-metric-box">
+            <span class="dsp-metric-label">SEMANTIC COSINE</span>
+            <span class="dsp-metric-val mono" id="explainCosine">--</span>
+          </div>
+          <div class="dsp-metric-box">
+            <span class="dsp-metric-label">ACOUSTIC ALIGNMENT</span>
+            <span class="dsp-metric-val mono" id="explainAlignment">--</span>
+          </div>
+          <div class="dsp-metric-box">
+            <span class="dsp-metric-label">HIGUCHI FRACTAL (HFD)</span>
+            <span class="dsp-metric-val mono" id="explainHFD">--</span>
+          </div>
+          <div class="dsp-metric-box">
+            <span class="dsp-metric-label">TEMPO</span>
+            <span class="dsp-metric-val mono" id="explainBPM">--</span>
+          </div>
+        </div>
+
         <p id="explainSummary" class="explain-text"></p>
-        <div class="insights-title">Matching Characteristics</div>
+        <div class="insights-title">Verified Physical Features</div>
         <ul id="explainInsights" class="insights-list"></ul>
       </div>
     </div>
@@ -213,11 +305,11 @@
 
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal-overlay hidden">
-    <div class="modal-backdrop close-modal"></div>
+    <div class="modal-backdrop close-modal" data-action="close-modal"></div>
     <div class="modal-box">
       <div class="modal-header">
         <h3>Upload Audio Track</h3>
-        <button class="btn-icon close-modal" aria-label="Close">
+        <button class="btn-icon close-modal modal-close-btn" data-action="close-modal" aria-label="Close">
           <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <path d="M3 3l10 10M13 3L3 13"/>
           </svg>
@@ -257,6 +349,6 @@
 
   <div id="toast" class="toast-popup hidden"></div>
   <audio id="audioElement" preload="none"></audio>
-  <script src="/app.js?v=4" defer></script>
+  <script src="/app.js?v=7" defer></script>
 </body>
 </html>
