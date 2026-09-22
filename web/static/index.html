@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
 
@@ -105,13 +105,20 @@
 
           <div class="filter-drawer-footer">
             <button id="resetFilters" class="btn-text">Clear filters</button>
+            <button id="applyFiltersBtn" class="btn btn-primary btn-sm">Apply Filters</button>
           </div>
         </div>
 
         <!-- Presets / Mood Tags -->
         <div class="preset-bar">
           <span class="preset-label">Try:</span>
-          <div id="presetPills" class="preset-pills"></div>
+          <div id="presetPills" class="preset-pills">
+            <button type="button" class="preset-pill" data-query="peaceful ambient celestial theme with slow tempo">Main Menu</button>
+            <button type="button" class="preset-pill" data-query="organic atmospheric environmental background music">Exploration</button>
+            <button type="button" class="preset-pill" data-query="warm organic acoustic folk music with gentle rhythm">Village</button>
+            <button type="button" class="preset-pill" data-query="dark eerie drone with deep sub-bass and tension">Dungeon</button>
+            <button type="button" class="preset-pill" data-query="heavy aggressive industrial boss battle with chaotic distortion">Boss Fight</button>
+          </div>
         </div>
       </section>
 
@@ -250,6 +257,6 @@
 
   <div id="toast" class="toast-popup hidden"></div>
   <audio id="audioElement" preload="none"></audio>
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=3" defer></script>
 </body>
 </html>

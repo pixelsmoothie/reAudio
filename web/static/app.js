@@ -110,6 +110,10 @@ function resetFilters() {
   $("bpmMax").value = 200;
   $("fractalSlider").value = 1.5;
   updateFilterLabels();
+  const mc = $("mainContent");
+  if (mc && !mc.classList.contains("is-landing")) {
+    doSearch();
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -211,18 +215,23 @@ async function loadBrowse() {
 
 async function doSearch() {
   const query = $("searchInput").value.trim();
-  if (!query) {
+  const filters = currentFilters();
+  const hasFilters = filterDirty.size > 0;
+
+  if (!query && !hasFilters) {
     showLanding();
     return;
   }
-  const body = { query, top_k: 12, ...currentFilters() };
+
+  const body = { query: query || "", top_k: 16, ...filters };
   try {
     const results = await api("/api/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    renderResults(results, `Results for "${query}"`, true);
+    const title = query ? `Results for "${query}"` : "Filtered Sounds";
+    renderResults(results, title, !!query);
   } catch (err) {
     toast(err.message, true);
   }
@@ -242,22 +251,36 @@ async function loadSimilar(track) {
 /* Presets                                                            */
 /* ------------------------------------------------------------------ */
 
-async function loadPresets() {
-  state.presets = await api("/api/presets");
-  const wrap = $("presetPills");
-  wrap.innerHTML = "";
-  Object.entries(state.presets).forEach(([name, preset]) => {
-    const pill = document.createElement("button");
-    pill.type = "button";
-    pill.className = "preset-pill";
-    pill.title = preset.description;
-    pill.textContent = name;
-    pill.addEventListener("click", () => {
-      $("searchInput").value = preset.query;
-      doSearch();
-    });
-    wrap.appendChild(pill);
+function wirePresetPills() {
+  document.querySelectorAll(".preset-pill").forEach((pill) => {
+    pill.onclick = () => {
+      const q = pill.dataset.query || state.presets[pill.textContent]?.query;
+      if (q) {
+        $("searchInput").value = q;
+        doSearch();
+      }
+    };
   });
+}
+
+async function loadPresets() {
+  try {
+    state.presets = await api("/api/presets");
+    const wrap = $("presetPills");
+    if (wrap) {
+      wrap.innerHTML = "";
+      Object.entries(state.presets).forEach(([name, preset]) => {
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "preset-pill";
+        pill.title = preset.description;
+        pill.textContent = name;
+        pill.dataset.query = preset.query;
+        wrap.appendChild(pill);
+      });
+    }
+  } catch (_) { /* keep fallback pills */ }
+  wirePresetPills();
 }
 
 /* ------------------------------------------------------------------ */
@@ -441,6 +464,7 @@ document.addEventListener("DOMContentLoaded", () => {
     $("filtersPanel").classList.toggle("hidden");
   });
 
+  let filterDebounce = null;
   for (const id of ["durationSlider", "bpmMin", "bpmMax", "fractalSlider"]) {
     $(id).addEventListener("input", () => {
       filterDirty.add(
@@ -448,6 +472,11 @@ document.addEventListener("DOMContentLoaded", () => {
         : id === "fractalSlider" ? "fractal" : "bpm"
       );
       updateFilterLabels();
+      const mc = $("mainContent");
+      if (mc && !mc.classList.contains("is-landing")) {
+        clearTimeout(filterDebounce);
+        filterDebounce = setTimeout(doSearch, 220);
+      }
     });
   }
 
@@ -455,26 +484,18 @@ document.addEventListener("DOMContentLoaded", () => {
     fractalMode = fractalMode === "max" ? "min" : "max";
     e.target.textContent = fractalMode === "max" ? "≤ max" : "≥ min";
     updateFilterLabels();
+    const mc = $("mainContent");
+    if (mc && !mc.classList.contains("is-landing")) {
+      doSearch();
+    }
   });
 
   $("resetFilters").addEventListener("click", resetFilters);
 
-  const emptyClear = $("emptyClearBtn");
-  if (emptyClear) {
-    emptyClear.addEventListener("click", () => {
-      $("searchInput").value = "";
-      resetFilters();
-      loadBrowse();
-    });
-  }
-
-  const brandLink = $("brandLink");
-  if (brandLink) {
-    brandLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      $("searchInput").value = "";
-      resetFilters();
-      loadBrowse();
+  const applyBtn = $("applyFiltersBtn");
+  if (applyBtn) {
+    applyBtn.addEventListener("click", () => {
+      doSearch();
     });
   }
 
