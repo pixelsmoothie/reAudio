@@ -424,6 +424,9 @@ function openExplainModal(track) {
     li.textContent = insight;
     list.appendChild(li);
   });
+  openModal($("explainModal"));
+}
+
 function openVectorModal(trackId, colKey, blobMeta) {
   $("vectorModalTitle").textContent = `${colKey} (${trackId})`;
   $("vectorModalSub").textContent = `${blobMeta.dims}-D Float32 Array • ${blobMeta.bytes} Bytes in SQLite BLOB`;
