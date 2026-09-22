@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=7">
+  <link rel="stylesheet" href="/styles.css?v=8">
 </head>
 <body>
 
@@ -127,75 +127,6 @@
         <div class="section-header">
           <h2 id="resultsTitle" class="section-title">Results</h2>
           <span id="resultsCount" class="section-count mono"></span>
-        </div>
-
-        <!-- Live Pipeline Execution Animation HUD -->
-        <div class="pipeline-hud hidden" id="pipelineHUD">
-          <div class="hud-top-bar">
-            <div class="hud-status">
-              <span class="hud-pulse-dot" id="hudPulseDot"></span>
-              <span class="hud-status-text mono" id="hudStatusText">PIPELINE: INITIALIZING RETRIEVAL...</span>
-            </div>
-            <div class="hud-telemetry mono" id="hudTelemetry">
-              <span id="hudCandidateStats">-- candidates</span>
-              <span class="hud-divider">&bull;</span>
-              <span id="hudLatencyStats">-- ms</span>
-            </div>
-          </div>
-
-          <div class="hud-stages-grid" id="hudStagesGrid">
-            <!-- Stage 1 -->
-            <div class="hud-stage-card" id="hudStage1">
-              <div class="stage-card-header">
-                <span class="stage-step-tag mono">STAGE 01</span>
-                <span class="stage-status-badge mono" id="stageBadge1">READY</span>
-              </div>
-              <div class="stage-title">Relational SQL Pruning</div>
-              <div class="stage-sub mono" id="stageSub1">BPM &bull; Length &bull; Higuchi</div>
-              <div class="stage-progress-track">
-                <div class="stage-progress-fill" id="stageFill1"></div>
-              </div>
-            </div>
-
-            <!-- Stage 2 -->
-            <div class="hud-stage-card" id="hudStage2">
-              <div class="stage-card-header">
-                <span class="stage-step-tag mono">STAGE 02</span>
-                <span class="stage-status-badge mono" id="stageBadge2">READY</span>
-              </div>
-              <div class="stage-title">CLAP 512-D Latent Vector</div>
-              <div class="stage-sub mono" id="stageSub2">PyTorch cosine projection</div>
-              <div class="stage-progress-track">
-                <div class="stage-progress-fill" id="stageFill2"></div>
-              </div>
-            </div>
-
-            <!-- Stage 3 -->
-            <div class="hud-stage-card" id="hudStage3">
-              <div class="stage-card-header">
-                <span class="stage-step-tag mono">STAGE 03</span>
-                <span class="stage-status-badge mono" id="stageBadge3">READY</span>
-              </div>
-              <div class="stage-title">70/30 Acoustic Score Fusion</div>
-              <div class="stage-sub mono" id="stageSub3">0.70 semantic + 0.30 acoustic</div>
-              <div class="stage-progress-track">
-                <div class="stage-progress-fill" id="stageFill3"></div>
-              </div>
-            </div>
-
-            <!-- Stage 4 -->
-            <div class="hud-stage-card" id="hudStage4">
-              <div class="stage-card-header">
-                <span class="stage-step-tag mono">STAGE 04</span>
-                <span class="stage-status-badge mono" id="stageBadge4">READY</span>
-              </div>
-              <div class="stage-title">Grounded Diagnostics</div>
-              <div class="stage-sub mono" id="stageSub4">Physical DSP feature match</div>
-              <div class="stage-progress-track">
-                <div class="stage-progress-fill" id="stageFill4"></div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="table-container">
@@ -349,6 +280,6 @@
 
   <div id="toast" class="toast-popup hidden"></div>
   <audio id="audioElement" preload="none"></audio>
-  <script src="/app.js?v=7" defer></script>
+  <script src="/app.js?v=8" defer></script>
 </body>
 </html>

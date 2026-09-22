@@ -181,80 +181,11 @@ function rowEl(track, showScore) {
   return row;
 }
 
-function resetPipelineHUD() {
-  const hud = $("pipelineHUD");
-  if (!hud) return;
-  hud.classList.remove("running", "done");
-  hud.classList.add("hidden");
-
-  for (let i = 1; i <= 4; i++) {
-    const card = $(`hudStage${i}`);
-    const badge = $(`stageBadge${i}`);
-    const fill = $(`stageFill${i}`);
-    if (card) card.classList.remove("is-active", "is-complete");
-    if (badge) badge.textContent = "READY";
-    if (fill) fill.style.width = "0%";
-  }
-}
-
-async function runPipelineAnimation() {
-  const hud = $("pipelineHUD");
-  if (!hud) return;
-  hud.classList.remove("hidden", "done");
-  hud.classList.add("running");
-  $("hudStatusText").textContent = "PIPELINE: EXECUTING MULTIMODAL RETRIEVAL...";
-
-  // Stage 1: Relational SQL Pruning
-  const c1 = $("hudStage1"), b1 = $("stageBadge1"), f1 = $("stageFill1");
-  if (c1) c1.classList.add("is-active");
-  if (b1) b1.textContent = "PRUNING...";
-  if (f1) f1.style.width = "100%";
-
-  await new Promise((r) => setTimeout(r, 140));
-  if (c1) { c1.classList.remove("is-active"); c1.classList.add("is-complete"); }
-  if (b1) b1.textContent = "FILTERED";
-
-  // Stage 2: CLAP 512-D Latent Vector Projection
-  const c2 = $("hudStage2"), b2 = $("stageBadge2"), f2 = $("stageFill2");
-  if (c2) c2.classList.add("is-active");
-  if (b2) b2.textContent = "EMBEDDING...";
-  if (f2) f2.style.width = "100%";
-
-  await new Promise((r) => setTimeout(r, 140));
-  if (c2) { c2.classList.remove("is-active"); c2.classList.add("is-complete"); }
-  if (b2) b2.textContent = "512-D COSINE";
-
-  // Stage 3: 70/30 Score Fusion
-  const c3 = $("hudStage3"), b3 = $("stageBadge3"), f3 = $("stageFill3");
-  if (c3) c3.classList.add("is-active");
-  if (b3) b3.textContent = "FUSING...";
-  if (f3) f3.style.width = "100%";
-
-  await new Promise((r) => setTimeout(r, 140));
-  if (c3) { c3.classList.remove("is-active"); c3.classList.add("is-complete"); }
-  if (b3) b3.textContent = "70/30 FUSED";
-
-  // Stage 4: Grounded Match Diagnostics
-  const c4 = $("hudStage4"), b4 = $("stageBadge4"), f4 = $("stageFill4");
-  if (c4) c4.classList.add("is-active");
-  if (b4) b4.textContent = "SYNTHESIZING...";
-  if (f4) f4.style.width = "100%";
-
-  await new Promise((r) => setTimeout(r, 120));
-  if (c4) { c4.classList.remove("is-active"); c4.classList.add("is-complete"); }
-  if (b4) b4.textContent = "GROUNDED";
-
-  hud.classList.remove("running");
-  hud.classList.add("done");
-  $("hudStatusText").textContent = "PIPELINE: EXECUTION COMPLETE";
-}
-
 function showLanding() {
   const mc = $("mainContent");
   if (mc) mc.classList.add("is-landing");
   const ts = $("tracksSection");
   if (ts) ts.classList.add("hidden");
-  resetPipelineHUD();
   $("searchInput").value = "";
   $("searchInput").focus();
 }
@@ -292,29 +223,16 @@ async function doSearch() {
     return;
   }
 
-  showResultsView();
   const body = { query: query || "", top_k: 16, ...filters };
-
-  // Run search API call and pipeline animation concurrently
-  const searchPromise = api("/api/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const animPromise = runPipelineAnimation();
-
   try {
-    const [results] = await Promise.all([searchPromise, animPromise]);
-    const telem = results.find((t) => t.pipeline_telemetry)?.pipeline_telemetry;
-    if (telem) {
-      if ($("hudCandidateStats")) $("hudCandidateStats").textContent = `${telem.candidates_returned} / ${telem.total_corpus} candidates`;
-      if ($("hudLatencyStats")) $("hudLatencyStats").textContent = `${telem.latency_ms} ms`;
-    }
+    const results = await api("/api/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
     const title = query ? `Results for "${query}"` : "Filtered Sounds";
     renderResults(results, title, !!query);
   } catch (err) {
-    resetPipelineHUD();
     toast(err.message, true);
   }
 }
