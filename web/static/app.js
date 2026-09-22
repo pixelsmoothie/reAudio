@@ -529,49 +529,88 @@ function renderDatabaseTable() {
 
   const filterText = ($("dbFilterInput")?.value || "").toLowerCase().trim();
 
-  let cols = [];
+  let colDefs = [];
   let rows = [];
 
   if (currentTab === "tracks") {
-    cols = ["track_id", "title", "artist", "duration (s)", "sample_rate", "bitrate", "channels", "file_path", "created_at"];
+    colDefs = [
+      { key: "track_id", label: "Track ID" },
+      { key: "title", label: "Title" },
+      { key: "artist", label: "Artist" },
+      { key: "duration", label: "Duration", isNum: true },
+      { key: "sample_rate", label: "Sample Rate", isNum: true },
+      { key: "bitrate", label: "Bitrate", isNum: true },
+      { key: "channels", label: "Channels" },
+      { key: "file_path", label: "File Path" },
+      { key: "created_at", label: "Ingested" },
+    ];
     rows = (state.dbData.tables?.tracks || []).map((t) => ({
       track_id: t.track_id,
       title: t.title,
       artist: t.artist,
-      "duration (s)": t.duration,
-      sample_rate: `${t.sample_rate} Hz`,
-      bitrate: t.bitrate,
-      channels: t.channels === 1 ? "Mono (1)" : "Stereo (2)",
+      duration: typeof t.duration === "number" ? `${t.duration.toFixed(1)}s` : "--",
+      sample_rate: t.sample_rate ? `${Number(t.sample_rate).toLocaleString()} Hz` : "--",
+      bitrate: t.bitrate ? `${t.bitrate} kbps` : "--",
+      channels: t.channels === 1 ? "1 (Mono)" : "2 (Stereo)",
       file_path: t.file_path,
-      created_at: t.created_at ? t.created_at.split("T")[0] : "--",
+      created_at: t.created_at ? t.created_at.replace("T", " ").slice(0, 16) : "--",
     }));
   } else if (currentTab === "audio_features") {
-    cols = ["track_id", "bpm", "higuchi_fractal_dimension", "spectral_centroid", "rms_energy", "zero_crossing_rate", "spectral_rolloff", "dynamic_range_db", "katz_fractal_dimension", "spectral_fractal_beta"];
+    colDefs = [
+      { key: "track_id", label: "Track ID" },
+      { key: "bpm", label: "Tempo", isNum: true },
+      { key: "higuchi_fractal_dimension", label: "Higuchi FD", isNum: true },
+      { key: "spectral_centroid", label: "Centroid", isNum: true },
+      { key: "rms_energy", label: "RMS Energy", isNum: true },
+      { key: "zero_crossing_rate", label: "ZCR", isNum: true },
+      { key: "spectral_rolloff", label: "Rolloff", isNum: true },
+      { key: "dynamic_range_db", label: "Dynamic Range", isNum: true },
+      { key: "katz_fractal_dimension", label: "Katz FD", isNum: true },
+      { key: "spectral_fractal_beta", label: "Fractal Beta", isNum: true },
+    ];
     rows = (state.dbData.tables?.audio_features || []).map((f) => ({
       track_id: f.track_id,
-      bpm: `${f.bpm} BPM`,
-      higuchi_fractal_dimension: f.higuchi_fractal_dimension,
-      spectral_centroid: `${f.spectral_centroid} Hz`,
-      rms_energy: f.rms_energy,
-      zero_crossing_rate: f.zero_crossing_rate,
-      spectral_rolloff: `${f.spectral_rolloff} Hz`,
-      dynamic_range_db: `${f.dynamic_range_db} dB`,
-      katz_fractal_dimension: f.katz_fractal_dimension,
-      spectral_fractal_beta: f.spectral_fractal_beta,
+      bpm: typeof f.bpm === "number" && f.bpm > 0 ? `${f.bpm.toFixed(1)} BPM` : "--",
+      higuchi_fractal_dimension: typeof f.higuchi_fractal_dimension === "number" ? f.higuchi_fractal_dimension.toFixed(4) : "--",
+      spectral_centroid: typeof f.spectral_centroid === "number" ? `${Math.round(f.spectral_centroid).toLocaleString()} Hz` : "--",
+      rms_energy: typeof f.rms_energy === "number" ? f.rms_energy.toFixed(4) : "--",
+      zero_crossing_rate: typeof f.zero_crossing_rate === "number" ? f.zero_crossing_rate.toFixed(4) : "--",
+      spectral_rolloff: typeof f.spectral_rolloff === "number" ? `${Math.round(f.spectral_rolloff).toLocaleString()} Hz` : "--",
+      dynamic_range_db: typeof f.dynamic_range_db === "number" ? `${f.dynamic_range_db.toFixed(1)} dB` : "--",
+      katz_fractal_dimension: typeof f.katz_fractal_dimension === "number" ? f.katz_fractal_dimension.toFixed(4) : "--",
+      spectral_fractal_beta: typeof f.spectral_fractal_beta === "number" ? f.spectral_fractal_beta.toFixed(4) : "--",
     }));
   } else if (currentTab === "semantic_metadata") {
-    cols = ["track_id", "primary_genre", "mood", "tags", "audio_embedding", "text_embedding", "generated_description"];
+    colDefs = [
+      { key: "track_id", label: "Track ID" },
+      { key: "primary_genre", label: "Genre" },
+      { key: "mood", label: "Mood" },
+      { key: "tags", label: "Tags" },
+      { key: "audio_embedding", label: "Audio Vector (BLOB)" },
+      { key: "text_embedding", label: "Text Vector (BLOB)" },
+      { key: "generated_description", label: "Description" },
+    ];
     rows = (state.dbData.tables?.semantic_metadata || []).map((s) => ({
       track_id: s.track_id,
-      primary_genre: s.primary_genre,
-      mood: s.mood,
-      tags: (s.tags || []).join(", "),
+      primary_genre: s.primary_genre || "--",
+      mood: s.mood || "--",
+      tags: s.tags || [],
       audio_embedding: s.audio_embedding,
       text_embedding: s.text_embedding,
-      generated_description: s.generated_description,
+      generated_description: s.generated_description || "--",
     }));
   } else if (currentTab === "joined") {
-    cols = ["track_id", "title", "artist", "duration", "bpm", "higuchi (HFD)", "genre", "mood", "audio_embedding"];
+    colDefs = [
+      { key: "track_id", label: "Track ID" },
+      { key: "title", label: "Title" },
+      { key: "artist", label: "Artist" },
+      { key: "duration", label: "Duration", isNum: true },
+      { key: "bpm", label: "Tempo", isNum: true },
+      { key: "higuchi", label: "Higuchi FD", isNum: true },
+      { key: "primary_genre", label: "Genre" },
+      { key: "mood", label: "Mood" },
+      { key: "audio_embedding", label: "Vector BLOB" },
+    ];
     const tMap = Object.fromEntries((state.dbData.tables?.tracks || []).map((t) => [t.track_id, t]));
     const fMap = Object.fromEntries((state.dbData.tables?.audio_features || []).map((f) => [f.track_id, f]));
     const sMap = Object.fromEntries((state.dbData.tables?.semantic_metadata || []).map((s) => [s.track_id, s]));
@@ -584,10 +623,10 @@ function renderDatabaseTable() {
         track_id: id,
         title: t.title || "--",
         artist: t.artist || "--",
-        duration: `${t.duration || 0}s`,
-        bpm: `${f.bpm || 0} BPM`,
-        "higuchi (HFD)": f.higuchi_fractal_dimension || "--",
-        genre: s.primary_genre || "--",
+        duration: typeof t.duration === "number" ? `${t.duration.toFixed(1)}s` : "--",
+        bpm: typeof f.bpm === "number" && f.bpm > 0 ? `${f.bpm.toFixed(1)} BPM` : "--",
+        higuchi: typeof f.higuchi_fractal_dimension === "number" ? f.higuchi_fractal_dimension.toFixed(4) : "--",
+        primary_genre: s.primary_genre || "--",
         mood: s.mood || "--",
         audio_embedding: s.audio_embedding,
       };
@@ -598,7 +637,8 @@ function renderDatabaseTable() {
   if (filterText) {
     rows = rows.filter((r) =>
       Object.values(r).some((v) => {
-        if (typeof v === "object" && v !== null) return false;
+        if (typeof v === "object" && v !== null && !Array.isArray(v)) return false;
+        if (Array.isArray(v)) return v.some((item) => String(item).toLowerCase().includes(filterText));
         return String(v || "").toLowerCase().includes(filterText);
       })
     );
@@ -606,9 +646,10 @@ function renderDatabaseTable() {
 
   // Render Head
   const headerTr = document.createElement("tr");
-  cols.forEach((c) => {
+  colDefs.forEach((col) => {
     const th = document.createElement("th");
-    th.textContent = c;
+    th.textContent = col.label;
+    if (col.isNum) th.className = "num-col";
     headerTr.appendChild(th);
   });
   thead.appendChild(headerTr);
@@ -617,9 +658,10 @@ function renderDatabaseTable() {
   if (rows.length === 0) {
     const emptyTr = document.createElement("tr");
     const emptyTd = document.createElement("td");
-    emptyTd.colSpan = cols.length;
+    emptyTd.colSpan = colDefs.length;
     emptyTd.style.textAlign = "center";
-    emptyTd.style.padding = "24px";
+    emptyTd.style.padding = "32px";
+    emptyTd.style.color = "var(--text-dim)";
     emptyTd.textContent = "No database records match the filter query.";
     emptyTr.appendChild(emptyTd);
     tbody.appendChild(emptyTr);
@@ -628,26 +670,50 @@ function renderDatabaseTable() {
 
   rows.forEach((row) => {
     const tr = document.createElement("tr");
-    cols.forEach((colKey) => {
+    colDefs.forEach((col) => {
       const td = document.createElement("td");
-      const val = row[colKey];
+      const val = row[col.key];
 
-      if (colKey === "track_id") {
-        td.className = "db-id-cell mono";
-        td.textContent = val;
-      } else if (colKey.includes("higuchi") || colKey === "bpm") {
-        td.className = "db-highlight mono";
-        td.textContent = val;
+      if (col.isNum) {
+        td.classList.add("num-col");
+      }
+
+      if (col.key === "track_id") {
+        td.innerHTML = `<span class="db-id-badge mono">${esc(val)}</span>`;
+      } else if (col.key === "title") {
+        td.innerHTML = `<span class="db-text-primary">${esc(val)}</span>`;
+      } else if (col.key === "artist") {
+        td.innerHTML = `<span class="db-text-secondary">${esc(val)}</span>`;
+      } else if (col.key === "bpm" || col.key.includes("higuchi") || col.key === "higuchi") {
+        td.innerHTML = val !== "--" ? `<span class="db-highlight">${esc(val)}</span>` : `<span class="db-empty-cell">--</span>`;
+      } else if (col.key === "primary_genre") {
+        td.innerHTML = val !== "--" ? `<span class="db-genre-badge">${esc(val)}</span>` : `<span class="db-empty-cell">--</span>`;
+      } else if (col.key === "mood") {
+        td.innerHTML = val !== "--" ? `<span class="db-mood-badge">${esc(val)}</span>` : `<span class="db-empty-cell">--</span>`;
+      } else if (col.key === "channels") {
+        td.innerHTML = `<span class="db-chip">${esc(val)}</span>`;
+      } else if (col.key === "file_path") {
+        td.innerHTML = `<span class="db-path mono" title="${esc(val)}">${esc(val)}</span>`;
+      } else if (col.key === "generated_description") {
+        td.innerHTML = val !== "--" ? `<div class="db-desc-cell" title="${esc(val)}">${esc(val)}</div>` : `<span class="db-empty-cell">--</span>`;
+      } else if (col.key === "tags") {
+        if (Array.isArray(val) && val.length > 0) {
+          td.innerHTML = val.map((t) => `<span class="db-tag">${esc(t)}</span>`).join("");
+        } else {
+          td.innerHTML = `<span class="db-empty-cell">--</span>`;
+        }
       } else if (typeof val === "object" && val !== null && val.dims) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "blob-btn mono";
         btn.textContent = `BLOB [${val.bytes} B] ${val.dims}-D`;
         btn.title = "Click to inspect raw float32 vector embedding";
-        btn.onclick = () => openVectorModal(row.track_id, colKey, val);
+        btn.onclick = () => openVectorModal(row.track_id, col.key, val);
         td.appendChild(btn);
+      } else if (val === null || val === undefined || val === "--") {
+        td.innerHTML = `<span class="db-empty-cell">--</span>`;
       } else {
-        td.textContent = val ?? "--";
+        td.textContent = String(val);
       }
       tr.appendChild(td);
     });
