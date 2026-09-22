@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>reAudio — AI-Powered Audio Discovery</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
+        <rect x="2" y="2" width="28" height="28" rx="6" fill="#141414" stroke="#333333" stroke-width="1.5"/>
+        <path d="M8 20 L8 12 M12 24 L12 8 M16 26 L16 6 M20 22 L20 10 M24 18 L24 14" stroke="#ededed" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>reAudio</h1>
+        <p class="tagline">AI-Powered Semantic Audio Retrieval &amp; Discovery</p>
+      </div>
+    </div>
+    <button id="uploadBtn" class="btn btn-accent">Upload Track</button>
+  </header>
+
+  <main class="main">
+
+    <section class="search-section glass">
+      <div class="search-row">
+        <svg class="search-icon" viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="9" cy="9" r="6"/>
+          <line x1="13.5" y1="13.5" x2="18" y2="18"/>
+        </svg>
+        <input id="searchInput" type="text" autocomplete="off"
+               placeholder="e.g., 'terrifying cyberpunk boss fight under 2 minutes' or 'peaceful ambient village'">
+        <button id="searchBtn" class="btn btn-accent">Search</button>
+        <button id="filtersToggle" class="btn btn-ghost">Filters</button>
+      </div>
+
+      <div id="presetPills" class="preset-pills" title="Game Developer Mode presets"></div>
+
+      <div id="filtersPanel" class="filters-panel hidden">
+        <div class="filter">
+          <label>Max duration <span class="filter-value" id="durationValue">any</span></label>
+          <input type="range" id="durationSlider" min="10" max="300" step="5" value="300">
+          <div class="slider-ends"><span>10s</span><span>300s</span></div>
+        </div>
+        <div class="filter">
+          <label>BPM range <span class="filter-value" id="bpmValue">any</span></label>
+          <div class="dual-slider">
+            <input type="range" id="bpmMin" min="40" max="200" step="1" value="40">
+            <input type="range" id="bpmMax" min="40" max="200" step="1" value="200">
+          </div>
+          <div class="slider-ends"><span>40</span><span>200</span></div>
+        </div>
+        <div class="filter">
+          <label>Fractal roughness <span class="filter-value" id="fractalValue">any</span></label>
+          <div class="fractal-row">
+            <span class="fractal-endpoint smooth-text">Smooth 1.0</span>
+            <input type="range" id="fractalSlider" min="1.0" max="2.0" step="0.01" value="1.5">
+            <span class="fractal-endpoint chaotic-text">2.0 Chaotic</span>
+            <button id="fractalMode" class="chip mode-chip" title="Toggle between 'at most' and 'at least'">&le; max</button>
+          </div>
+        </div>
+        <div class="filter-actions">
+          <button id="resetFilters" class="btn btn-ghost small">Reset filters</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="results">
+      <div class="results-header">
+        <h2 id="resultsTitle">All Tracks</h2>
+        <span id="resultsCount" class="results-count"></span>
+      </div>
+      <div id="trackGrid" class="track-grid"></div>
+      <div id="emptyState" class="empty-state hidden">
+        <p>No tracks matched. Try relaxing the filters or a different intent.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="player-bar glass">
+    <div class="now-playing">
+      <div id="npTitle" class="np-title">Nothing playing</div>
+      <div id="npArtist" class="np-artist">Select a track to start</div>
+    </div>
+    <div class="player-controls">
+      <button id="playPause" class="btn btn-accent round" title="Play / Pause">&#9654;</button>
+      <span id="curTime" class="time">0:00</span>
+      <input type="range" id="seekBar" min="0" max="100" step="0.1" value="0">
+      <span id="durTime" class="time">0:00</span>
+    </div>
+    <canvas id="visualizer" height="72"></canvas>
+  </footer>
+
+  <!-- AI explanation modal -->
+  <div id="explainModal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-head">
+        <h3>Why did this match?</h3>
+        <button class="btn btn-ghost small close-modal">&times;</button>
+      </div>
+      <p id="explainTrack" class="explain-track"></p>
+      <div id="explainScore" class="explain-score"></div>
+      <p id="explainSummary" class="explain-summary"></p>
+      <ul id="explainInsights" class="explain-insights"></ul>
+    </div>
+  </div>
+
+  <!-- Upload modal -->
+  <div id="uploadModal" class="modal hidden">
+    <div class="modal-content glass">
+      <div class="modal-head">
+        <h3>Upload Track</h3>
+        <button class="btn btn-ghost small close-modal">&times;</button>
+      </div>
+      <form id="uploadForm">
+        <label class="field-label" for="fileInput">Audio file (.mp3, .wav, .flac, .ogg)</label>
+        <input type="file" id="fileInput" accept=".mp3,.wav,.flac,.ogg" required>
+        <label class="field-label" for="titleInput">Title</label>
+        <input type="text" id="titleInput" placeholder="Track title" required>
+        <label class="field-label" for="artistInput">Artist</label>
+        <input type="text" id="artistInput" placeholder="Artist (optional)">
+        <div class="upload-actions">
+          <button type="submit" id="uploadSubmit" class="btn btn-accent">Analyze &amp; Index Audio</button>
+          <div id="uploadSpinner" class="spinner hidden" title="Extracting DSP & fractal features, computing embeddings..."></div>
+        </div>
+        <p id="uploadStatus" class="upload-status"></p>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <audio id="audioElement" preload="none"></audio>
+  <script src="/app.js" defer></script>
+</body>
+</html>
