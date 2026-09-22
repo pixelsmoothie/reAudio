@@ -22,7 +22,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
-from core.database import get_all_tracks, get_track_by_id, save_track_record
+from core.database import (
+    get_all_tracks,
+    get_database_dump,
+    get_track_by_id,
+    save_track_record,
+)
 from core.dsp import extract_dsp_features
 from core.models import AudioIntelligenceModel, generate_semantic_profile
 from core.retrieval import HybridRetrievalEngine, Recommender
@@ -104,6 +109,12 @@ def search(request: SearchRequest):
             "active_filters": filters,
         }
     return [_public_track(r) for r in results]
+
+
+@app.get("/api/database/inspect")
+def inspect_database():
+    """Return raw database tables and relational schema inspection data."""
+    return get_database_dump()
 
 
 @app.get("/api/pipeline/stats")

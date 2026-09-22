@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
 </head>
 <body>
 
@@ -20,6 +20,13 @@
           <span class="brand-title">reAudio</span>
           <span class="brand-sub">Sound Library</span>
         </a>
+      </div>
+
+      <div class="nav-center">
+        <div class="nav-view-switcher">
+          <button id="viewSearchBtn" class="nav-tab-btn is-active">Sound Library</button>
+          <button id="viewDatabaseBtn" class="nav-tab-btn">Database Inspector</button>
+        </div>
       </div>
 
       <div class="nav-right">
@@ -151,6 +158,79 @@
         </div>
       </section>
 
+      <!-- Dedicated Database & Schema Section -->
+      <section class="database-section hidden" id="databaseSection">
+        <div class="db-header">
+          <div class="db-header-info">
+            <h2 class="db-title">Database &amp; Schema Inspector</h2>
+            <p class="db-sub">Live SQLite relational tables with extracted DSP features and 512-D vector BLOBs</p>
+          </div>
+          
+          <div class="db-stats-bar mono">
+            <div class="db-stat-badge">
+              <span class="db-stat-label">ENGINE</span>
+              <span class="db-stat-val">SQLite 3 / SQLAlchemy 2.0</span>
+            </div>
+            <div class="db-stat-badge">
+              <span class="db-stat-label">TABLES</span>
+              <span class="db-stat-val">3 Normalized</span>
+            </div>
+            <div class="db-stat-badge">
+              <span class="db-stat-label">TOTAL TRACKS</span>
+              <span class="db-stat-val" id="dbTotalTracks">--</span>
+            </div>
+            <div class="db-stat-badge">
+              <span class="db-stat-label">EMBEDDINGS</span>
+              <span class="db-stat-val">512-D Float32 (2,048 B/BLOB)</span>
+            </div>
+            <div class="db-stat-badge">
+              <span class="db-stat-label">FOREIGN KEYS</span>
+              <span class="db-stat-val">CASCADE on track_id</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Selector and Search Filter -->
+        <div class="db-controls">
+          <div class="db-table-tabs" id="dbTableTabs">
+            <button class="db-tab-btn is-active" data-table="tracks">
+              <span>tracks</span>
+              <span class="db-tab-count mono" id="countTracks">--</span>
+            </button>
+            <button class="db-tab-btn" data-table="audio_features">
+              <span>audio_features</span>
+              <span class="db-tab-count mono" id="countFeatures">--</span>
+            </button>
+            <button class="db-tab-btn" data-table="semantic_metadata">
+              <span>semantic_metadata</span>
+              <span class="db-tab-count mono" id="countSemantic">--</span>
+            </button>
+            <button class="db-tab-btn" data-table="joined">
+              <span>joined_view</span>
+              <span class="db-tab-count mono" id="countJoined">--</span>
+            </button>
+          </div>
+
+          <div class="db-filter-wrap">
+            <input type="text" id="dbFilterInput" class="db-filter-input" placeholder="Filter rows across table..." autocomplete="off">
+          </div>
+        </div>
+
+        <!-- Schema Metadata Legend -->
+        <div class="db-schema-legend mono" id="dbSchemaLegend">
+          <span class="legend-title">ACTIVE TABLE:</span>
+          <span class="legend-desc" id="dbTableDesc">Core track metadata and audio format specifications</span>
+        </div>
+
+        <!-- Database Table View -->
+        <div class="db-table-container">
+          <table class="db-table" id="dbTable">
+            <thead id="dbTableHead"></thead>
+            <tbody id="dbTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+
     </main>
 
     <!-- Bottom Audio Player (Revealed when playing) -->
@@ -234,6 +314,28 @@
     </div>
   </div>
 
+  <!-- Vector BLOB Inspector Modal -->
+  <div id="vectorModal" class="modal-overlay hidden">
+    <div class="modal-backdrop close-modal" data-action="close-modal"></div>
+    <div class="modal-box modal-wide">
+      <div class="modal-header">
+        <div>
+          <h3 id="vectorModalTitle">Vector Embedding BLOB</h3>
+          <span class="modal-subtitle mono" id="vectorModalSub">512-D L2-Normalized float32 array</span>
+        </div>
+        <button class="btn-icon close-modal modal-close-btn" data-action="close-modal" aria-label="Close">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 3l10 10M13 3L3 13"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="vector-meta-bar mono" id="vectorMetaBar"></div>
+        <div class="vector-dimensions-container mono" id="vectorDimensions"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Upload Modal -->
   <div id="uploadModal" class="modal-overlay hidden">
     <div class="modal-backdrop close-modal" data-action="close-modal"></div>
@@ -280,6 +382,6 @@
 
   <div id="toast" class="toast-popup hidden"></div>
   <audio id="audioElement" preload="none"></audio>
-  <script src="/app.js?v=8" defer></script>
+  <script src="/app.js?v=9" defer></script>
 </body>
 </html>

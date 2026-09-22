@@ -12,6 +12,9 @@ const state = {
   presets: {},
   browseTracks: [],
   currentTrackId: null,
+  activeView: "search",
+  dbData: null,
+  currentDbTable: "tracks",
 };
 
 const SVG_PLAY = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
@@ -421,7 +424,232 @@ function openExplainModal(track) {
     li.textContent = insight;
     list.appendChild(li);
   });
-  openModal($("explainModal"));
+function openVectorModal(trackId, colKey, blobMeta) {
+  $("vectorModalTitle").textContent = `${colKey} (${trackId})`;
+  $("vectorModalSub").textContent = `${blobMeta.dims}-D Float32 Array • ${blobMeta.bytes} Bytes in SQLite BLOB`;
+
+  const metaBar = $("vectorMetaBar");
+  metaBar.innerHTML = `
+    <span>Storage Type: <strong>SQLAlchemy LargeBinary</strong></span>
+    <span>Dtype: <strong>${blobMeta.dtype}</strong></span>
+    <span>Total Dimensions: <strong>${blobMeta.dims}</strong></span>
+    <span>Binary Footprint: <strong>${blobMeta.bytes} bytes</strong></span>
+  `;
+
+  const dimContainer = $("vectorDimensions");
+  dimContainer.innerHTML = "";
+
+  (blobMeta.preview || []).forEach((num, idx) => {
+    const item = document.createElement("div");
+    item.className = "vec-dim-item";
+    item.innerHTML = `<span class="vec-dim-idx">[${idx}]</span><span class="vec-dim-val">${num.toFixed(4)}</span>`;
+    dimContainer.appendChild(item);
+  });
+
+  const remainingNotice = document.createElement("div");
+  remainingNotice.style.gridColumn = "1 / -1";
+  remainingNotice.style.color = "var(--text-dim)";
+  remainingNotice.style.padding = "8px 0 0";
+  remainingNotice.textContent = `... and ${blobMeta.dims - (blobMeta.preview || []).length} more float32 dimensions stored in binary BLOB.`;
+  dimContainer.appendChild(remainingNotice);
+
+  openModal($("vectorModal"));
+}
+
+/* ------------------------------------------------------------------ */
+/* View Switching & Database Inspector                                */
+/* ------------------------------------------------------------------ */
+
+function switchView(viewName) {
+  state.activeView = viewName;
+  const isDb = viewName === "database";
+
+  const btnSearch = $("viewSearchBtn");
+  const btnDb = $("viewDatabaseBtn");
+  if (btnSearch) btnSearch.classList.toggle("is-active", !isDb);
+  if (btnDb) btnDb.classList.toggle("is-active", isDb);
+
+  const searchArea = $("searchArea");
+  const tracksSec = $("tracksSection");
+  const dbSec = $("databaseSection");
+  const mainContent = $("mainContent");
+
+  if (isDb) {
+    if (searchArea) searchArea.classList.add("hidden");
+    if (tracksSec) tracksSec.classList.add("hidden");
+    if (dbSec) dbSec.classList.remove("hidden");
+    if (mainContent) mainContent.classList.remove("is-landing");
+    loadDatabaseView();
+  } else {
+    if (dbSec) dbSec.classList.add("hidden");
+    if (searchArea) searchArea.classList.remove("hidden");
+    showLanding();
+  }
+}
+
+async function loadDatabaseView() {
+  try {
+    const data = await api("/api/database/inspect");
+    state.dbData = data;
+
+    const total = data.summary?.total_tracks || 0;
+    if ($("dbTotalTracks")) $("dbTotalTracks").textContent = total;
+    if ($("countTracks")) $("countTracks").textContent = data.tables?.tracks?.length || 0;
+    if ($("countFeatures")) $("countFeatures").textContent = data.tables?.audio_features?.length || 0;
+    if ($("countSemantic")) $("countSemantic").textContent = data.tables?.semantic_metadata?.length || 0;
+    if ($("countJoined")) $("countJoined").textContent = total;
+
+    renderDatabaseTable();
+  } catch (err) {
+    toast(`Failed to load database: ${err.message}`, true);
+  }
+}
+
+const DB_TABLE_DESCRIPTIONS = {
+  tracks: "Core relational audio tracks (duration, sample rate, file storage path, timestamps)",
+  audio_features: "Extracted DSP acoustic features (BPM, Higuchi Fractal Dimension HFD, Spectral Centroid, ZCR)",
+  semantic_metadata: "Semantic classification, tags, and 512-D L2-normalized float32 vector BLOBs",
+  joined: "Consolidated relational view: audio metadata, DSP features, and vector embeddings combined",
+};
+
+function renderDatabaseTable() {
+  if (!state.dbData) return;
+
+  const currentTab = state.currentDbTable || "tracks";
+  const descEl = $("dbTableDesc");
+  if (descEl) descEl.textContent = DB_TABLE_DESCRIPTIONS[currentTab] || "";
+
+  const thead = $("dbTableHead");
+  const tbody = $("dbTableBody");
+  thead.innerHTML = "";
+  tbody.innerHTML = "";
+
+  const filterText = ($("dbFilterInput")?.value || "").toLowerCase().trim();
+
+  let cols = [];
+  let rows = [];
+
+  if (currentTab === "tracks") {
+    cols = ["track_id", "title", "artist", "duration (s)", "sample_rate", "bitrate", "channels", "file_path", "created_at"];
+    rows = (state.dbData.tables?.tracks || []).map((t) => ({
+      track_id: t.track_id,
+      title: t.title,
+      artist: t.artist,
+      "duration (s)": t.duration,
+      sample_rate: `${t.sample_rate} Hz`,
+      bitrate: t.bitrate,
+      channels: t.channels === 1 ? "Mono (1)" : "Stereo (2)",
+      file_path: t.file_path,
+      created_at: t.created_at ? t.created_at.split("T")[0] : "--",
+    }));
+  } else if (currentTab === "audio_features") {
+    cols = ["track_id", "bpm", "higuchi_fractal_dimension", "spectral_centroid", "rms_energy", "zero_crossing_rate", "spectral_rolloff", "dynamic_range_db", "katz_fractal_dimension", "spectral_fractal_beta"];
+    rows = (state.dbData.tables?.audio_features || []).map((f) => ({
+      track_id: f.track_id,
+      bpm: `${f.bpm} BPM`,
+      higuchi_fractal_dimension: f.higuchi_fractal_dimension,
+      spectral_centroid: `${f.spectral_centroid} Hz`,
+      rms_energy: f.rms_energy,
+      zero_crossing_rate: f.zero_crossing_rate,
+      spectral_rolloff: `${f.spectral_rolloff} Hz`,
+      dynamic_range_db: `${f.dynamic_range_db} dB`,
+      katz_fractal_dimension: f.katz_fractal_dimension,
+      spectral_fractal_beta: f.spectral_fractal_beta,
+    }));
+  } else if (currentTab === "semantic_metadata") {
+    cols = ["track_id", "primary_genre", "mood", "tags", "audio_embedding", "text_embedding", "generated_description"];
+    rows = (state.dbData.tables?.semantic_metadata || []).map((s) => ({
+      track_id: s.track_id,
+      primary_genre: s.primary_genre,
+      mood: s.mood,
+      tags: (s.tags || []).join(", "),
+      audio_embedding: s.audio_embedding,
+      text_embedding: s.text_embedding,
+      generated_description: s.generated_description,
+    }));
+  } else if (currentTab === "joined") {
+    cols = ["track_id", "title", "artist", "duration", "bpm", "higuchi (HFD)", "genre", "mood", "audio_embedding"];
+    const tMap = Object.fromEntries((state.dbData.tables?.tracks || []).map((t) => [t.track_id, t]));
+    const fMap = Object.fromEntries((state.dbData.tables?.audio_features || []).map((f) => [f.track_id, f]));
+    const sMap = Object.fromEntries((state.dbData.tables?.semantic_metadata || []).map((s) => [s.track_id, s]));
+
+    rows = Object.keys(tMap).map((id) => {
+      const t = tMap[id] || {};
+      const f = fMap[id] || {};
+      const s = sMap[id] || {};
+      return {
+        track_id: id,
+        title: t.title || "--",
+        artist: t.artist || "--",
+        duration: `${t.duration || 0}s`,
+        bpm: `${f.bpm || 0} BPM`,
+        "higuchi (HFD)": f.higuchi_fractal_dimension || "--",
+        genre: s.primary_genre || "--",
+        mood: s.mood || "--",
+        audio_embedding: s.audio_embedding,
+      };
+    });
+  }
+
+  // Filter rows
+  if (filterText) {
+    rows = rows.filter((r) =>
+      Object.values(r).some((v) => {
+        if (typeof v === "object" && v !== null) return false;
+        return String(v || "").toLowerCase().includes(filterText);
+      })
+    );
+  }
+
+  // Render Head
+  const headerTr = document.createElement("tr");
+  cols.forEach((c) => {
+    const th = document.createElement("th");
+    th.textContent = c;
+    headerTr.appendChild(th);
+  });
+  thead.appendChild(headerTr);
+
+  // Render Body
+  if (rows.length === 0) {
+    const emptyTr = document.createElement("tr");
+    const emptyTd = document.createElement("td");
+    emptyTd.colSpan = cols.length;
+    emptyTd.style.textAlign = "center";
+    emptyTd.style.padding = "24px";
+    emptyTd.textContent = "No database records match the filter query.";
+    emptyTr.appendChild(emptyTd);
+    tbody.appendChild(emptyTr);
+    return;
+  }
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    cols.forEach((colKey) => {
+      const td = document.createElement("td");
+      const val = row[colKey];
+
+      if (colKey === "track_id") {
+        td.className = "db-id-cell mono";
+        td.textContent = val;
+      } else if (colKey.includes("higuchi") || colKey === "bpm") {
+        td.className = "db-highlight mono";
+        td.textContent = val;
+      } else if (typeof val === "object" && val !== null && val.dims) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "blob-btn mono";
+        btn.textContent = `BLOB [${val.bytes} B] ${val.dims}-D`;
+        btn.title = "Click to inspect raw float32 vector embedding";
+        btn.onclick = () => openVectorModal(row.track_id, colKey, val);
+        td.appendChild(btn);
+      } else {
+        td.textContent = val ?? "--";
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -584,7 +812,31 @@ document.addEventListener("DOMContentLoaded", () => {
   if (brandLink) {
     brandLink.addEventListener("click", (e) => {
       e.preventDefault();
-      showLanding();
+      switchView("search");
+    });
+  }
+
+  // View Switcher (Sound Library vs Database Inspector)
+  const viewSearchBtn = $("viewSearchBtn");
+  const viewDatabaseBtn = $("viewDatabaseBtn");
+  if (viewSearchBtn) viewSearchBtn.addEventListener("click", () => switchView("search"));
+  if (viewDatabaseBtn) viewDatabaseBtn.addEventListener("click", () => switchView("database"));
+
+  // DB Table Tabs
+  document.querySelectorAll(".db-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".db-tab-btn").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      state.currentDbTable = btn.dataset.table;
+      renderDatabaseTable();
+    });
+  });
+
+  // DB Filter Input
+  const dbFilter = $("dbFilterInput");
+  if (dbFilter) {
+    dbFilter.addEventListener("input", () => {
+      renderDatabaseTable();
     });
   }
 

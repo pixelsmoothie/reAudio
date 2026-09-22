@@ -315,3 +315,102 @@ def filter_tracks_sql(duration_min: Optional[float] = None,
     finally:
         if owns_session:
             session.close()
+
+
+def get_database_dump(session: Optional[Session] = None) -> dict:
+    """Return raw table dumps and schema metadata for database exploration."""
+    owns_session = session is None
+    session = get_session() if owns_session else session
+    try:
+        t_rows = session.execute(select(Track).order_by(Track.track_id)).scalars().all()
+        tracks_data = [
+            {
+                "track_id": t.track_id,
+                "title": t.title,
+                "artist": t.artist,
+                "duration": round(t.duration, 2),
+                "sample_rate": t.sample_rate,
+                "bitrate": t.bitrate,
+                "channels": t.channels,
+                "file_path": t.file_path,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            }
+            for t in t_rows
+        ]
+
+        f_rows = session.execute(select(AudioFeatures).order_by(AudioFeatures.track_id)).scalars().all()
+        features_data = [
+            {
+                "track_id": f.track_id,
+                "bpm": round(f.bpm, 1),
+                "rms_energy": round(f.rms_energy, 4),
+                "spectral_centroid": round(f.spectral_centroid, 1),
+                "spectral_rolloff": round(f.spectral_rolloff, 1),
+                "zero_crossing_rate": round(f.zero_crossing_rate, 4),
+                "dynamic_range_db": round(f.dynamic_range_db, 1),
+                "higuchi_fractal_dimension": round(f.higuchi_fractal_dimension, 4),
+                "katz_fractal_dimension": round(f.katz_fractal_dimension, 4),
+                "spectral_fractal_beta": round(f.spectral_fractal_beta, 4),
+            }
+            for f in f_rows
+        ]
+
+        s_rows = session.execute(select(SemanticMetadata).order_by(SemanticMetadata.track_id)).scalars().all()
+        semantic_data = []
+        for s in s_rows:
+            tags = []
+            try:
+                tags = json.loads(s.tags_json)
+            except Exception:
+                pass
+
+            audio_preview = []
+            if s.audio_embedding:
+                arr = blob_to_vector(s.audio_embedding)
+                if arr is not None:
+                    audio_preview = [round(float(x), 4) for x in arr[:6]]
+
+            text_preview = []
+            if s.text_embedding:
+                arr = blob_to_vector(s.text_embedding)
+                if arr is not None:
+                    text_preview = [round(float(x), 4) for x in arr[:6]]
+
+            semantic_data.append({
+                "track_id": s.track_id,
+                "primary_genre": s.primary_genre,
+                "mood": s.mood,
+                "tags": tags,
+                "generated_description": s.generated_description,
+                "audio_embedding": {
+                    "bytes": len(s.audio_embedding) if s.audio_embedding else 0,
+                    "dims": 512,
+                    "dtype": "float32",
+                    "preview": audio_preview,
+                },
+                "text_embedding": {
+                    "bytes": len(s.text_embedding) if s.text_embedding else 0,
+                    "dims": 512,
+                    "dtype": "float32",
+                    "preview": text_preview,
+                },
+            })
+
+        return {
+            "tables": {
+                "tracks": tracks_data,
+                "audio_features": features_data,
+                "semantic_metadata": semantic_data,
+            },
+            "summary": {
+                "engine": "SQLite 3.x / SQLAlchemy 2.0 ORM",
+                "tables_count": 3,
+                "total_tracks": len(tracks_data),
+                "foreign_keys": "audio_features.track_id -> tracks.track_id (CASCADE), semantic_metadata.track_id -> tracks.track_id (CASCADE)",
+                "indexed_columns": ["tracks.duration", "audio_features.bpm", "audio_features.higuchi_fractal_dimension", "semantic_metadata.primary_genre", "semantic_metadata.mood"],
+                "vector_storage": "Raw L2-normalized 512-dim float32 binary BLOBs (2,048 bytes per embedding)",
+            }
+        }
+    finally:
+        if owns_session:
+            session.close()
