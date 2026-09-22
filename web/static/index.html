@@ -3,23 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>reAudio — AI-Powered Audio Discovery</title>
+  <title>reAudio — Studio Audio Retrieval &amp; Fractal Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
+  <!-- Ambient background glow -->
+  <div class="ambient-glow" aria-hidden="true"></div>
+
   <header class="header">
     <div class="logo">
-      <svg viewBox="0 0 32 32" width="32" height="32" aria-hidden="true">
-        <rect x="2" y="2" width="28" height="28" rx="6" fill="#141414" stroke="#333333" stroke-width="1.5"/>
-        <path d="M8 20 L8 12 M12 24 L12 8 M16 26 L16 6 M20 22 L20 10 M24 18 L24 14" stroke="#ededed" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <div class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#14171d" stroke="#262b35" stroke-width="1.5"/>
+          <path d="M8 19 L8 13 M12 23 L12 9 M16 25 L16 7 M20 21 L20 11 M24 17 L24 15" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
       <div>
-        <h1>reAudio</h1>
-        <p class="tagline">AI-Powered Semantic Audio Retrieval &amp; Discovery</p>
+        <div class="brand-row">
+          <h1>reAudio</h1>
+          <span class="badge-tag">STUDIO ENGINE</span>
+        </div>
+        <p class="tagline">Fractal-Aware Semantic Audio Retrieval &amp; DSP Analytics</p>
       </div>
     </div>
-    <button id="uploadBtn" class="btn btn-accent">Upload Track</button>
+    <div class="header-actions">
+      <button id="uploadBtn" class="btn btn-accent">
+        <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M10 14V3m0 0L6 7m4-4l4 4M3 17h14"/>
+        </svg>
+        <span>Upload Track</span>
+      </button>
+    </div>
   </header>
 
   <main class="main">
@@ -30,103 +48,192 @@
           <circle cx="9" cy="9" r="6"/>
           <line x1="13.5" y1="13.5" x2="18" y2="18"/>
         </svg>
-        <input id="searchInput" type="text" autocomplete="off"
-               placeholder="e.g., 'terrifying cyberpunk boss fight under 2 minutes' or 'peaceful ambient village'">
-        <button id="searchBtn" class="btn btn-accent">Search</button>
-        <button id="filtersToggle" class="btn btn-ghost">Filters</button>
+        <input id="searchInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Describe sound intent... (e.g. 'terrifying cyberpunk boss fight under 2 min' or 'peaceful acoustic village')">
+        <div class="input-actions">
+          <button id="searchBtn" class="btn btn-primary">Search</button>
+          <button id="filtersToggle" class="btn btn-ghost" title="Toggle audio constraints">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M2 4h12M4 8h8M6 12h4"/>
+            </svg>
+            <span>Filters</span>
+            <span id="activeFiltersBadge" class="filter-count hidden">0</span>
+          </button>
+        </div>
       </div>
 
-      <div id="presetPills" class="preset-pills" title="Game Developer Mode presets"></div>
+      <div class="presets-container">
+        <span class="presets-label">ARCHETYPES:</span>
+        <div id="presetPills" class="preset-pills"></div>
+      </div>
 
       <div id="filtersPanel" class="filters-panel hidden">
-        <div class="filter">
-          <label>Max duration <span class="filter-value" id="durationValue">any</span></label>
-          <input type="range" id="durationSlider" min="10" max="300" step="5" value="300">
-          <div class="slider-ends"><span>10s</span><span>300s</span></div>
-        </div>
-        <div class="filter">
-          <label>BPM range <span class="filter-value" id="bpmValue">any</span></label>
-          <div class="dual-slider">
-            <input type="range" id="bpmMin" min="40" max="200" step="1" value="40">
-            <input type="range" id="bpmMax" min="40" max="200" step="1" value="200">
+        <div class="filters-grid">
+          <div class="filter-card">
+            <div class="filter-head">
+              <label for="durationSlider">MAX DURATION</label>
+              <span class="filter-value mono" id="durationValue">any</span>
+            </div>
+            <input type="range" id="durationSlider" min="10" max="300" step="5" value="300">
+            <div class="slider-ends mono"><span>10s</span><span>300s</span></div>
           </div>
-          <div class="slider-ends"><span>40</span><span>200</span></div>
-        </div>
-        <div class="filter">
-          <label>Fractal roughness <span class="filter-value" id="fractalValue">any</span></label>
-          <div class="fractal-row">
-            <span class="fractal-endpoint smooth-text">Smooth 1.0</span>
-            <input type="range" id="fractalSlider" min="1.0" max="2.0" step="0.01" value="1.5">
-            <span class="fractal-endpoint chaotic-text">2.0 Chaotic</span>
-            <button id="fractalMode" class="chip mode-chip" title="Toggle between 'at most' and 'at least'">&le; max</button>
+
+          <div class="filter-card">
+            <div class="filter-head">
+              <label>BPM RANGE</label>
+              <span class="filter-value mono" id="bpmValue">any</span>
+            </div>
+            <div class="dual-slider">
+              <input type="range" id="bpmMin" min="40" max="200" step="1" value="40">
+              <input type="range" id="bpmMax" min="40" max="200" step="1" value="200">
+            </div>
+            <div class="slider-ends mono"><span>40 BPM</span><span>200 BPM</span></div>
+          </div>
+
+          <div class="filter-card">
+            <div class="filter-head">
+              <label for="fractalSlider">HIGUCHI FRACTAL ROUGHNESS</label>
+              <span class="filter-value mono" id="fractalValue">any</span>
+            </div>
+            <div class="fractal-row">
+              <span class="fractal-endpoint smooth-text">1.0 Smooth</span>
+              <input type="range" id="fractalSlider" min="1.0" max="2.0" step="0.01" value="1.5">
+              <span class="fractal-endpoint chaotic-text">2.0 Chaos</span>
+              <button id="fractalMode" class="chip mode-chip" title="Toggle between max and min threshold">&le; max</button>
+            </div>
           </div>
         </div>
+
         <div class="filter-actions">
-          <button id="resetFilters" class="btn btn-ghost small">Reset filters</button>
+          <button id="resetFilters" class="btn btn-ghost small">Reset all filters</button>
         </div>
       </div>
     </section>
 
     <section class="results">
       <div class="results-header">
-        <h2 id="resultsTitle">All Tracks</h2>
-        <span id="resultsCount" class="results-count"></span>
+        <div class="results-meta">
+          <h2 id="resultsTitle">Indexed Library</h2>
+          <span id="resultsCount" class="results-count mono"></span>
+        </div>
       </div>
       <div id="trackGrid" class="track-grid"></div>
       <div id="emptyState" class="empty-state hidden">
-        <p>No tracks matched. Try relaxing the filters or a different intent.</p>
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="M21 21l-4.35-4.35M8 11h6"/>
+          </svg>
+        </div>
+        <p class="empty-title">No matching tracks</p>
+        <p class="empty-subtitle">Try relaxing your BPM, duration, or fractal roughness constraints.</p>
       </div>
     </section>
 
   </main>
 
+  <!-- Studio Dock Player -->
   <footer class="player-bar glass">
     <div class="now-playing">
-      <div id="npTitle" class="np-title">Nothing playing</div>
-      <div id="npArtist" class="np-artist">Select a track to start</div>
+      <div class="equalizer-bars" id="eqBars" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="track-info">
+        <div id="npTitle" class="np-title">Nothing playing</div>
+        <div id="npArtist" class="np-artist">Select any track to audition</div>
+      </div>
     </div>
+
     <div class="player-controls">
-      <button id="playPause" class="btn btn-accent round" title="Play / Pause">&#9654;</button>
-      <span id="curTime" class="time">0:00</span>
-      <input type="range" id="seekBar" min="0" max="100" step="0.1" value="0">
-      <span id="durTime" class="time">0:00</span>
+      <button id="playPause" class="btn-play-round" title="Play / Pause" aria-label="Play or Pause">
+        <svg class="icon-play" viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+          <path d="M4 3.5v9l8-4.5-8-4.5z"/>
+        </svg>
+      </button>
+      <div class="playback-bar-wrap">
+        <span id="curTime" class="time mono">0:00</span>
+        <div class="seek-container">
+          <input type="range" id="seekBar" min="0" max="100" step="0.1" value="0">
+        </div>
+        <span id="durTime" class="time mono">0:00</span>
+      </div>
     </div>
-    <canvas id="visualizer" height="72"></canvas>
+
+    <div class="visualizer-container" title="Real-time Web Audio API Oscilloscope">
+      <canvas id="visualizer" height="64"></canvas>
+    </div>
   </footer>
 
-  <!-- AI explanation modal -->
+  <!-- Grounded RAG Match Explanation Modal -->
   <div id="explainModal" class="modal hidden">
+    <div class="modal-backdrop close-modal"></div>
     <div class="modal-content glass">
       <div class="modal-head">
-        <h3>Why did this match?</h3>
-        <button class="btn btn-ghost small close-modal">&times;</button>
+        <div>
+          <span class="modal-badge">RAG GROUNDED DIAGNOSTICS</span>
+          <h3>Why did this track match?</h3>
+        </div>
+        <button class="btn-close close-modal" aria-label="Close modal">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 3l10 10M13 3L3 13"/>
+          </svg>
+        </button>
       </div>
-      <p id="explainTrack" class="explain-track"></p>
-      <div id="explainScore" class="explain-score"></div>
-      <p id="explainSummary" class="explain-summary"></p>
-      <ul id="explainInsights" class="explain-insights"></ul>
+      <div class="modal-body">
+        <div class="explain-track-card">
+          <div id="explainTrack" class="explain-track-title"></div>
+          <div id="explainScore" class="explain-score-pill mono"></div>
+        </div>
+        <p id="explainSummary" class="explain-summary"></p>
+        <div class="insights-label">VERIFIED PHYSICAL ATTRIBUTES</div>
+        <ul id="explainInsights" class="explain-insights"></ul>
+      </div>
     </div>
   </div>
 
-  <!-- Upload modal -->
+  <!-- Audio Ingestion Modal -->
   <div id="uploadModal" class="modal hidden">
+    <div class="modal-backdrop close-modal"></div>
     <div class="modal-content glass">
       <div class="modal-head">
-        <h3>Upload Track</h3>
-        <button class="btn btn-ghost small close-modal">&times;</button>
+        <div>
+          <span class="modal-badge">AUDIO INGESTION</span>
+          <h3>Upload &amp; Analyze Track</h3>
+        </div>
+        <button class="btn-close close-modal" aria-label="Close modal">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 3l10 10M13 3L3 13"/>
+          </svg>
+        </button>
       </div>
-      <form id="uploadForm">
-        <label class="field-label" for="fileInput">Audio file (.mp3, .wav, .flac, .ogg)</label>
-        <input type="file" id="fileInput" accept=".mp3,.wav,.flac,.ogg" required>
-        <label class="field-label" for="titleInput">Title</label>
-        <input type="text" id="titleInput" placeholder="Track title" required>
-        <label class="field-label" for="artistInput">Artist</label>
-        <input type="text" id="artistInput" placeholder="Artist (optional)">
+      <form id="uploadForm" class="modal-body">
+        <div class="dropzone" id="dropZone">
+          <input type="file" id="fileInput" accept=".mp3,.wav,.flac,.ogg" required>
+          <div class="dropzone-inner">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round">
+              <path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"/>
+            </svg>
+            <p class="dropzone-text">Click or drag audio file here</p>
+            <span class="dropzone-types mono">WAV &bull; MP3 &bull; FLAC &bull; OGG</span>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="field-label" for="titleInput">TRACK TITLE</label>
+            <input type="text" id="titleInput" class="input-field" placeholder="Track title" required>
+          </div>
+          <div class="form-group">
+            <label class="field-label" for="artistInput">ARTIST / STUDIO</label>
+            <input type="text" id="artistInput" class="input-field" placeholder="Artist (optional)">
+          </div>
+        </div>
+
         <div class="upload-actions">
           <button type="submit" id="uploadSubmit" class="btn btn-accent">Analyze &amp; Index Audio</button>
-          <div id="uploadSpinner" class="spinner hidden" title="Extracting DSP & fractal features, computing embeddings..."></div>
+          <div id="uploadSpinner" class="spinner hidden" title="Extracting DSP features..."></div>
         </div>
-        <p id="uploadStatus" class="upload-status"></p>
+        <p id="uploadStatus" class="upload-status mono"></p>
       </form>
     </div>
   </div>

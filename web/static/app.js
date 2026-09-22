@@ -58,6 +58,9 @@ function toast(message, isError = false) {
 const filterDirty = new Set();
 let fractalMode = "max"; // "max" => at most (smooth), "min" => at least (chaotic)
 
+const SVG_PLAY = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`;
+const SVG_PAUSE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+
 function updateFilterLabels() {
   $("durationValue").textContent = filterDirty.has("duration")
     ? `≤ ${$("durationSlider").value}s` : "any";
@@ -68,6 +71,12 @@ function updateFilterLabels() {
   const fv = parseFloat($("fractalSlider").value).toFixed(2);
   $("fractalValue").textContent = filterDirty.has("fractal")
     ? (fractalMode === "max" ? `≤ ${fv}` : `≥ ${fv}`) : "any";
+
+  const badge = $("activeFiltersBadge");
+  if (badge) {
+    badge.textContent = filterDirty.size;
+    badge.classList.toggle("hidden", filterDirty.size === 0);
+  }
 }
 
 function currentFilters() {
@@ -123,7 +132,7 @@ function cardEl(track, showScore) {
 
   card.innerHTML = `
     <div class="card-top">
-      <button class="btn play-btn round" data-action="play" title="Play / Pause">&#9654;</button>
+      <button class="btn play-btn round" data-action="play" title="Play / Pause">${SVG_PLAY}</button>
       <div class="card-title-wrap">
         <h3 class="card-title">${esc(track.title)}</h3>
         <p class="card-artist">${esc(track.artist)}</p>
@@ -255,13 +264,18 @@ function togglePlay(track) {
 
 function syncPlayIcons() {
   const playing = !audioEl.paused && !!state.currentTrackId;
+  const playerBar = $("playerBar");
+  if (playerBar) playerBar.classList.toggle("is-playing", playing);
+
   document.querySelectorAll(".track-card").forEach((card) => {
     const btn = card.querySelector('[data-action="play"]');
     if (!btn) return;
     const isCurrent = card.dataset.trackId === state.currentTrackId;
-    btn.innerHTML = (playing && isCurrent) ? "&#10074;&#10074;" : "&#9654;";
+    card.classList.toggle("active-track", isCurrent);
+    btn.innerHTML = (playing && isCurrent) ? SVG_PAUSE : SVG_PLAY;
   });
-  $("playPause").innerHTML = playing ? "&#10074;&#10074;" : "&#9654;";
+  const mainBtn = $("playPause");
+  if (mainBtn) mainBtn.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
 }
 
 function startVisualizer() {
@@ -287,16 +301,20 @@ function startVisualizer() {
 
     analyser.getByteTimeDomainData(timeData);
 
+    ctx2d.save();
     ctx2d.beginPath();
-    ctx2d.strokeStyle = "rgba(235, 235, 240, 0.85)";
-    ctx2d.lineWidth = 1.5 * dpr;
+    ctx2d.strokeStyle = "#38bdf8";
+    ctx2d.shadowColor = "rgba(56, 189, 248, 0.55)";
+    ctx2d.shadowBlur = 6 * dpr;
+    ctx2d.lineWidth = 1.75 * dpr;
     for (let i = 0; i < timeData.length; i++) {
       const x = (i / (timeData.length - 1)) * w;
-      const y = h / 2 + ((timeData[i] - 128) / 128) * h * 0.38;
+      const y = h / 2 + ((timeData[i] - 128) / 128) * h * 0.42;
       if (i === 0) ctx2d.moveTo(x, y);
       else ctx2d.lineTo(x, y);
     }
     ctx2d.stroke();
+    ctx2d.restore();
   };
   draw();
 }
@@ -443,6 +461,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAllModals();
+    if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      e.preventDefault();
+      $("searchInput").focus();
+    }
   });
 
   setupUpload();
